@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2675f5">
+<title>Мои дела</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f6fc;color:#172033;font-family:Arial,sans-serif}
+header{background:#2675f5;color:white;padding:25px 20px}
+header h1{margin:0 0 8px;font-size:28px}
+header p{margin:0;opacity:.9}
+main{max-width:600px;margin:auto;padding:18px}
+.card{background:white;padding:18px;border-radius:16px;margin-bottom:16px;box-shadow:0 3px 12px #0000000b}
+input,button{font:inherit}
+input{width:100%;padding:14px;border:1px solid #ccd4e0;border-radius:10px;margin-bottom:10px}
+button{border:0;border-radius:10px;padding:13px;cursor:pointer}
+.primary{width:100%;background:#2675f5;color:white;font-weight:bold}
+.stats{display:flex;justify-content:space-between;gap:8px;text-align:center}
+.stats div{flex:1;background:#edf4ff;padding:12px 4px;border-radius:10px}
+.stats strong{display:block;font-size:22px;color:#2675f5}
+.task{display:flex;align-items:center;gap:10px;border-bottom:1px solid #eee;padding:13px 0}
+.task:last-child{border-bottom:0}
+.task input{width:20px;height:20px;margin:0}
+.task span{flex:1;overflow-wrap:anywhere}
+.task.done span{text-decoration:line-through;color:#8993a3}
+.del{background:#ffe8e8;color:#c62828;padding:9px 12px}
+.filters{display:flex;gap:7px;margin-bottom:12px}
+.filters button{flex:1;background:#edf1f7;padding:10px 4px}
+.filters button.active{background:#2675f5;color:white}
+.empty{text-align:center;color:#8993a3;padding:20px 0}
+footer{text-align:center;color:#8993a3;font-size:12px;padding:10px}
+</style>
+</head>
+<body>
+<header>
+<h1>📝 Мои дела</h1>
+<p>Планируй свой день и достигай целей!</p>
+</header>
+<main>
+<section class="card">
+<h3>➕ Добавить новое дело</h3>
+<input id="taskInput" placeholder="Например, купить продукты">
+<button class="primary" id="addBtn">Добавить дело</button>
+</section>
+
+<section class="card stats">
+<div><strong id="total">0</strong>Всего</div>
+<div><strong id="pending">0</strong>Осталось</div>
+<div><strong id="completed">0</strong>Готово</div>
+</section>
+
+<section class="card">
+<h3>📋 Мой список</h3>
+<div class="filters">
+<button class="active" data-filter="all">Все</button>
+<button data-filter="pending">Активные</button>
+<button data-filter="done">Готовые</button>
+</div>
+<div id="taskList"></div>
+</section>
+<footer>Мои дела · Твои планы под контролем</footer>
+</main>
+
+<script>
+const input=document.getElementById('taskInput');
+const list=document.getElementById('taskList');
+let tasks=[];
+let filter='all';
+
+try{
+ tasks=JSON.parse(localStorage.getItem('moiDelaTasks')||'[]');
+ if(!Array.isArray(tasks))tasks=[];
+}catch(e){tasks=[]}
+
+function save(){
+ try{localStorage.setItem('moiDelaTasks',JSON.stringify(tasks))}
+ catch(e){alert('Не удалось сохранить данные на устройстве.')}
+}
+
+function render(){
+ const total=tasks.length;
+ const done=tasks.filter(t=>t.done).length;
+ document.getElementById('total').textContent=total;
+ document.getElementById('pending').textContent=total-done;
+ document.getElementById('completed').textContent=done;
+ list.replaceChildren();
+
+ const shown=tasks.filter(t=>
+  filter==='all'||(filter==='done'&&t.done)||(filter==='pending'&&!t.done)
+ );
+
+ if(!shown.length){
+  const empty=document.createElement('div');
+  empty.className='empty';
+  empty.textContent=tasks.length?'В этом разделе пока пусто':'Пока нет дел. Добавь первое!';
+  list.append(empty);
+  return;
+ }
+
+ shown.forEach(task=>{
+  const row=document.createElement('div');
+  row.className='task'+(task.done?' done':'');
+
+  const check=document.createElement('input');
+  check.type='checkbox';
+  check.checked=task.done;
+  check.setAttribute('aria-label','Отметить выполнение');
+  check.addEventListener('change',()=>{
+   task.done=check.checked;save();render();
+  });
+
+  const text=document.createElement('span');
+  text.textContent=task.text;
+
+  const del=document.createElement('button');
+  del.className='del';
+  del.textContent='Удалить';
+  del.addEventListener('click',()=>{
+   tasks=tasks.filter(t=>t.id!==task.id);save();render();
+  });
+
+  row.append(check,text,del);
+  list.append(row);
+ });
+}
+
+function addTask(){
+ const text=input.value.trim();
+ if(!text){input.focus();return}
+ tasks.unshift({id:Date.now()+Math.random(),text,done:false});
+ save();
+ input.value='';
+ render();
+ input.focus();
+}
+
+document.getElementById('addBtn').addEventListener('click',addTask);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')addTask()});
+
+document.querySelectorAll('[data-filter]').forEach(btn=>{
+ btn.addEventListener('click',()=>{
+  filter=btn.dataset.filter;
+  document.querySelectorAll('[data-filter]').forEach(b=>
+   b.classList.toggle('active',b===btn)
+  );
+  render();
+ });
+});
+
+render();
+</script>
+</body>
+</html>
